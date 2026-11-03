@@ -15,7 +15,7 @@
 1. Verify the download against `checksums.txt` from the same release (see below).
 2. Run `Universal-Converter-Setup-1.0.0.exe`.
 3. The installer is per-user and installs under
-   `%LOCALAPPDATA%\Programs\Universal Converter`. No UAC prompt is expected.
+   `%LOCALAPPDATA%\Universal Converter`. No UAC prompt is expected.
 4. Start **Universal Converter** from the Start Menu shortcut.
 
 The build is currently **unsigned**. Windows SmartScreen can show “Windows
@@ -84,7 +84,7 @@ FFmpeg, FFprobe, Tesseract, the OCR language folder, LibreOffice `soffice.com`,
 PATH; an invalid path marks the engine missing instead of silently switching.
 
 ImageMagick is the only engine not bundled. Drop `magick.exe` and its DLLs into
-`resources/imagemagick/` (installer: `%LOCALAPPDATA%\Programs\Universal
+`resources/imagemagick/` (installer: `%LOCALAPPDATA%\Universal
 Converter\resources\imagemagick`) to enable AVIF, HEIC and SVG input.
 
 ## Manual updates
