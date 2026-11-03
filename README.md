@@ -32,8 +32,9 @@ optional engine shows its reason and setup hint instead of a dead button.
 
 ## Install
 
-Use the NSIS installer from the GitHub release assets, or from the local
-`release/` folder after building (per-user, no administrator prompt):
+Use the NSIS installer from this repository's GitHub Releases page once the
+release assets are published, or from the local `release/` folder after building
+(per-user, no administrator prompt):
 
 ```
 release/Universal-Converter-Setup-1.0.0.exe
