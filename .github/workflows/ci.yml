@@ -1,0 +1,92 @@
+name: CI
+
+# Development checks. Nothing here publishes a release.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_engine_tests:
+        description: Run the full suite that needs the bundled engine payload (self-hosted runner)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend lint and build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  rust:
+    name: Rust format, clippy and test compilation
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:versions
+      - run: cargo fmt --check --manifest-path src-tauri/Cargo.toml
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets --no-run
+
+  engine-tests:
+    name: Engine integration tests (self-hosted)
+    # The engine payload is roughly 2 GB and is not stored in the repository,
+    # so the full suite runs on a runner that already has resources/ in place.
+    if: github.event_name == 'workflow_dispatch' && inputs.run_engine_tests
+    runs-on: [self-hosted, windows, x64, engine-payload]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm run build
+      - name: Verify engine payload
+        shell: pwsh
+        run: |
+          $required = @(
+            'resources/ffmpeg/ffmpeg.exe',
+            'resources/ffmpeg/ffprobe.exe',
+            'resources/7zip/7z.exe',
+            'resources/libreoffice/program/soffice.com',
+            'resources/tesseract/tesseract.exe',
+            'resources/tesseract/tessdata/eng.traineddata',
+            'resources/pdfium/pdfium.dll',
+            'resources/qpdf/qpdf.exe'
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) { throw "Missing bundled engine file: $file" }
+          }
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets

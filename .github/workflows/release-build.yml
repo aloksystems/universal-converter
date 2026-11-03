@@ -1,0 +1,67 @@
+name: Release build
+
+# Manual only. Produces installer, portable ZIP, release notes and checksums as
+# workflow artifacts. Publishing a GitHub release, signing and update metadata
+# stay manual until the missing infrastructure exists — see docs/RELEASE-PROCESS.md.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact version to build; must match package.json, Cargo.toml and tauri.conf.json
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build release artifacts
+    # The bundled engine payload (about 2 GB) must already exist on the runner.
+    runs-on: [self-hosted, windows, x64, engine-payload]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - name: Check version consistency
+        run: npm run check:versions -- ${{ inputs.version }}
+      - name: Verify engine payload
+        shell: pwsh
+        run: |
+          $required = @(
+            'resources/ffmpeg/ffmpeg.exe',
+            'resources/ffmpeg/ffprobe.exe',
+            'resources/7zip/7z.exe',
+            'resources/libreoffice/program/soffice.com',
+            'resources/tesseract/tesseract.exe',
+            'resources/tesseract/tessdata/eng.traineddata',
+            'resources/pdfium/pdfium.dll',
+            'resources/qpdf/qpdf.exe'
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) { throw "Missing bundled engine file: $file" }
+          }
+      - name: Full test suite
+        run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets
+      - name: Build NSIS installer
+        run: npm run tauri build
+      - name: Assemble release folder
+        run: npm run package:release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-converter-${{ inputs.version }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Print artifact summary
+        shell: pwsh
+        run: |
+          Get-ChildItem release | Format-Table Name, Length | Out-String | Write-Host
+          Get-Content release/checksums.txt | Write-Host
