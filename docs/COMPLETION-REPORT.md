@@ -63,10 +63,12 @@ than faked.
 
 ## Phase 9 status list
 
-1. **CI/CD implementation — IMPLEMENTED BUT NOT VERIFIED.** `.github/workflows/ci.yml`
+1. **CI/CD implementation — VERIFIED ON HOSTED RUNNERS.** `.github/workflows/ci.yml`
    runs frontend lint/build, version consistency, Rust fmt/clippy, and test
    compilation on hosted Windows runners, with the full engine suite gated to a
-   self-hosted runner. It has not executed on GitHub from this folder.
+   self-hosted runner. CI run #5 on commit `691da93` passed both hosted jobs. The
+   engine suite has not been dispatched because the self-hosted runner and its
+   `resources/` payload do not exist yet.
 2. **Automated test pipeline — VERIFIED LOCALLY.** `cargo test --all-targets`
    passed 262 tests, 0 failed, 0 ignored (418.37 s) on 2026-11-03, using the real
    bundled engines. `cargo fmt --check` passed.
@@ -118,6 +120,7 @@ than faked.
 | GUI subsystem | PE optional-header check on the built exe | **PASS** — subsystem 2 (Windows GUI), so no console window |
 | Installed launch | Install 1.0.1, start `universal-converter.exe` | **PASS** — window handle in 2.3 s, `main window shown in 3288 ms`, `startup state ready in 138 ms`, `Responding = True`, no `conhost.exe` child |
 | Background engine load | Log after launch | **PASS** — all seven engines probed after the window appeared; LibreOffice 5.6 s, FFmpeg 3.3 s, Tesseract 1.9 s; the UI stayed responsive throughout |
+| GitHub Actions CI | CI run #5 (`691da93`) | **PASS** — frontend lint/build and Rust fmt/clippy/test-compile jobs green; engine suite skipped on the absent self-hosted runner |
 | npm audit | `npm audit --audit-level=high` | **PASS** — 0 vulnerabilities |
 | Rust audit | `cargo audit --file src-tauri/Cargo.lock` | **PASS** — 0 vulnerabilities; 7 warnings (unmaintained crates, yanked `async-executor`, Linux/GTK-only `glib` advisory) recorded in [SECURITY.md](SECURITY.md) |
 | Release checksums | `Get-FileHash` against `release/checksums.txt` | **PASS** — both SHA-256 values match |
