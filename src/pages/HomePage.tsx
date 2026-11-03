@@ -69,8 +69,13 @@ export function HomePage() {
             Engines on this machine
           </CardTitle>
           <CardDescription>
-            {ready} of {engines.length || 7} ready. The rest need a tool you can install or drop in
-            <code className="mx-1 rounded bg-muted px-1">resources/</code>.
+            {engines.length === 0
+              ? 'Checking the tools installed on this machine…'
+              : `${ready} of ${engines.length} ready. The rest need a tool you can install or drop in`}
+            {engines.length === 0 ? null : (
+              <code className="mx-1 rounded bg-muted px-1">resources/</code>
+            )}
+            {engines.length === 0 ? null : '.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

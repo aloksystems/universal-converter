@@ -13,7 +13,7 @@
 ## Installer
 
 1. Verify the download against `checksums.txt` from the same release (see below).
-2. Run `Universal-Converter-Setup-1.0.0.exe`.
+2. Run `Universal-Converter-Setup-1.0.1.exe`.
 3. The installer is per-user and installs under
    `%LOCALAPPDATA%\Universal Converter`. No UAC prompt is expected.
 4. Start **Universal Converter** from the Start Menu shortcut.
@@ -26,7 +26,7 @@ if the checksum matches. Signing requirements are described in
 ### Verify the checksum
 
 ```powershell
-Get-FileHash .\Universal-Converter-Setup-1.0.0.exe -Algorithm SHA256
+Get-FileHash .\Universal-Converter-Setup-1.0.1.exe -Algorithm SHA256
 Get-Content .\checksums.txt
 ```
 
@@ -34,7 +34,7 @@ The printed hash must match the first value in `checksums.txt`.
 
 ## Portable build
 
-1. Unzip `Universal-Converter-Portable-1.0.0.zip` to any folder.
+1. Unzip `Universal-Converter-Portable-1.0.1.zip` to any folder.
 2. Keep the `resources` folder next to `Universal Converter.exe`. The engine
    locator looks beside the executable; moving only the `.exe` removes every
    external engine.

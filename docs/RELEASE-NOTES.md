@@ -1,13 +1,45 @@
-# Universal Converter 1.0.0
+# Universal Converter release notes
 
-Released 2026-11-02. First public build.
+## 1.0.1 — 2026-11-03
+
+Startup reliability update. All 1.0.0 features are unchanged.
+
+### Fixed
+
+- **No more console window.** Release builds are now Windows GUI subsystem
+  binaries, so launching the app no longer opens a command prompt beside it.
+- **The window appears immediately.** Engine discovery used to run before the
+  first paint and could block for tens of seconds while LibreOffice, FFmpeg or
+  Tesseract answered. The window now shows at once; engine status fills in from
+  a background worker and the UI stays responsive.
+- **Engine probes run concurrently.** One slow engine no longer delays every
+  other engine's result.
+- **Blank window after install.** If Windows starts the app with a deleted
+  working directory (common when an installer launches it), the app now restores
+  the directory before WebView2 initialises instead of failing with
+  `E_INVALIDARG`.
+- **Clearer WebView2 failure.** If the webview still cannot be created, the app
+  shows a native error explaining that the WebView2 Runtime needs repair instead
+  of leaving a blank, apparently hung window.
+
+### Verification
+
+`cargo test --all-targets`, `cargo fmt --check`,
+`cargo clippy --all-targets -- -D warnings`, `npm run lint`, `npm run build`
+and `npm run check:versions` pass. The installed 1.0.1 build opens its window in
+about 2–3 seconds and stays responsive while the engines are probed in the
+background; the executable is a Windows GUI binary, so no console appears.
+
+## 1.0.0 — 2026-11-02
+
+First public build.
 
 Universal Converter is a Windows desktop file converter that runs entirely on
 this machine. There is no account, no upload and no telemetry. A converted file
 is always written next to a copy-safe name and never replaces the file you
 started with.
 
-## What is in this release
+### What is in 1.0.0
 
 - **Images** — JPEG, PNG, WebP, BMP, TIFF, GIF and ICO convert in-process.
   Resize, crop-to-fill, rotation, flips, quality, metadata stripping and
@@ -58,7 +90,7 @@ started with.
   folder, custom folder), concurrency, timeouts and extraction limits. Paths
   chosen here take priority over bundled copies and PATH.
 
-## Bundled engines
+### Bundled engines
 
 Everything needed for PDF, OCR, documents, audio, video and archives ships in
 `resources/`. ImageMagick is optional and is only needed for AVIF, HEIC and SVG.
@@ -73,21 +105,21 @@ Settings → Engines → Re-scan picks up a tool you add later.
 | qpdf | bundled |
 | Tesseract | 5.x with selected language data |
 
-## Install
+### Install
 
-- **Installer** — `Universal-Converter-Setup-1.0.0.exe`. Per-user install with
+- **Installer** — `Universal-Converter-Setup-1.0.1.exe`. Per-user install with
   no administrator prompt; installs under `%LOCALAPPDATA%`.
-- **Portable** — `Universal-Converter-Portable-1.0.0.zip`. Unzip anywhere and
+- **Portable** — `Universal-Converter-Portable-1.0.1.zip`. Unzip anywhere and
   run `Universal Converter.exe`. The bundled tools live next to it in
   `resources/`.
 - **Checksums** — `checksums.txt` lists the SHA-256 of both artifacts.
 
-## Known limitations
+### Known limitations
 
 - **The build is unsigned.** Windows SmartScreen may warn on first run. Code
   signing is a release decision for the maintainer; see
   [BUILD.md](BUILD.md#code-signing).
-- **Updates are manual.** Version 1.0.0 has no auto-updater and no update
+- **Updates are manual.** Version 1.0.1 has no auto-updater and no update
   endpoint. To update, install a newer build; settings and history stay in
   `%APPDATA%\UniversalConverter`.
 - **Windows 10 version 19045 is the tested platform.** Windows 11 has not been
@@ -101,7 +133,7 @@ Settings → Engines → Re-scan picks up a tool you add later.
 - Hardware video encoders are offered only after a one-frame test encode
   succeeds; otherwise the software encoder is used.
 
-## Verification
+### Verification
 
 Every output is checked before a job is reported as successful: signatures and
 page counts for PDFs, package types for office files, ffprobe for media, archive

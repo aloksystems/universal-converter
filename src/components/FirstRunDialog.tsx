@@ -74,7 +74,9 @@ export function FirstRunDialog() {
               Engines
             </h2>
             <p className="mt-2 text-sm">
-              {ready.length} of {engines.length} engines ready on this machine.
+              {engines.length === 0
+                ? 'Checking the engines installed on this machine…'
+                : `${ready.length} of ${engines.length} engines ready on this machine.`}
             </p>
             {optional.length > 0 ? (
               <ul className="mt-2 flex flex-col gap-1.5">

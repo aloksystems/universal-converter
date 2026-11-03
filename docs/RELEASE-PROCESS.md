@@ -67,8 +67,8 @@ with the bundled 7-Zip, copies the release notes and writes SHA-256 checksums.
 
 ```
 release/
-  Universal-Converter-Setup-1.0.0.exe
-  Universal-Converter-Portable-1.0.0.zip
+  Universal-Converter-Setup-1.0.1.exe
+  Universal-Converter-Portable-1.0.1.zip
   checksums.txt
   RELEASE-NOTES.md
 ```
@@ -95,7 +95,7 @@ GitHub release, tag, signature or update manifest.
 
 ## Signing
 
-The 1.0.0 build is unsigned. SmartScreen may warn and publisher identity is not
+The 1.0.1 build is unsigned. SmartScreen may warn and publisher identity is not
 established. Signing requires a real Windows code-signing certificate; the
 options and verification commands are documented in [BUILD.md](BUILD.md#code-signing).
 Never commit a certificate, PFX, password or signing key. After signing, verify
@@ -115,8 +115,8 @@ failed and successful update have all been tested.
 After the artifacts pass verification:
 
 ```bash
-git tag -a v1.0.0 -m "Universal Converter 1.0.0"
-git push origin v1.0.0
+git tag -a v1.0.1 -m "Universal Converter 1.0.1"
+git push origin v1.0.1
 ```
 
 Create the GitHub release manually, attach the installer, portable ZIP,

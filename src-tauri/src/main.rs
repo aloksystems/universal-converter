@@ -1,3 +1,8 @@
+// Release builds are GUI applications. Without this attribute Windows gives the
+// process a console, which is the stray command window that appeared beside the
+// app. Debug builds keep the console so `npm run tauri dev` still shows logs.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod automation;
 mod commands;
 mod core;
@@ -22,6 +27,28 @@ fn show_main_window(app: &tauri::AppHandle) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+    }
+}
+
+/// Explorer and the NSIS installer can start the app with a working directory
+/// that has already been deleted. WebView2 refuses to initialise in that state
+/// (`E_INVALIDARG`), which leaves the window blank, so fall back to the folder
+/// that holds the executable.
+fn restore_working_directory() {
+    if std::env::current_dir().is_ok() {
+        return;
+    }
+    let Some(directory) = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(std::path::Path::to_path_buf))
+    else {
+        return;
+    };
+    if std::env::set_current_dir(&directory).is_ok() {
+        log::warn!(
+            "the working directory was missing; using {} instead",
+            directory.display()
+        );
     }
 }
 
@@ -103,6 +130,26 @@ fn fit_window_to_work_area(window: &tauri::WebviewWindow) -> tauri::Result<()> {
 }
 
 fn main() {
+    let process_started = std::time::Instant::now();
+    restore_working_directory();
+
+    // A GUI build has no stdout. Registering the stdout target in release was
+    // pointless and could touch an invalid handle, so it stays debug-only.
+    let log_targets = {
+        let folder = Target::new(TargetKind::Folder {
+            path: paths::logs_root(),
+            file_name: Some("universal-converter".to_owned()),
+        });
+        #[cfg(debug_assertions)]
+        {
+            vec![folder, Target::new(TargetKind::Stdout)]
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            vec![folder]
+        }
+    };
+
     tauri::Builder::default()
         // Must be the first plugin: a second launch forwards Explorer's paths
         // to this window instead of opening a duplicate application.
@@ -118,20 +165,13 @@ fn main() {
                 // diagnose a failure without letting logs grow forever.
                 .max_file_size(10 * 1024 * 1024)
                 .rotation_strategy(RotationStrategy::KeepSome(5))
-                .targets([
-                    // The blueprint's storage layout keeps logs beside the other
-                    // app data, so the plugin writes there instead of its default.
-                    Target::new(TargetKind::Folder {
-                        path: paths::logs_root(),
-                        file_name: Some("universal-converter".to_owned()),
-                    }),
-                    Target::new(TargetKind::Stdout),
-                ])
+                .targets(log_targets)
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(move |app| {
+            let setup_started = std::time::Instant::now();
             paths::ensure_storage_layout()?;
             log::info!("storage ready at {}", paths::data_root().display());
             commands::install(app.handle())?;
@@ -141,6 +181,10 @@ fn main() {
                 return Err("application state was not managed".into());
             }
             log::info!("engines and queue initialised");
+            log::info!(
+                "startup state ready in {} ms",
+                setup_started.elapsed().as_millis()
+            );
 
             let show = MenuItemBuilder::with_id("show", "Show Universal Converter").build(app)?;
             let queue = MenuItemBuilder::with_id("queue", "Open queue").build(app)?;
@@ -178,15 +222,32 @@ fn main() {
                 })
                 .build(app)?;
             log::info!("tray icon ready");
-            if let Some(window) = app.get_webview_window("main") {
-                if let Err(error) = fit_window_to_work_area(&window) {
-                    log::warn!("could not fit the main window to the monitor work area: {error}");
-                }
-                if let Err(error) = window.show() {
-                    log::warn!("could not show the main window: {error}");
-                }
-                let _ = window.set_focus();
+            let Some(window) = app.get_webview_window("main") else {
+                // WebView2 occasionally refuses to create its controller. Say so
+                // instead of leaving a blank window that looks hung forever.
+                log::error!("the main window was created without a webview");
+                use tauri_plugin_dialog::DialogExt;
+                app.dialog()
+                    .message(
+                        "Universal Converter could not start its window. Install or repair the \
+                         Microsoft Edge WebView2 Runtime, then try again.",
+                    )
+                    .title("Universal Converter could not start")
+                    .kind(tauri_plugin_dialog::MessageDialogKind::Error)
+                    .blocking_show();
+                return Err("the main window has no webview".into());
+            };
+            if let Err(error) = fit_window_to_work_area(&window) {
+                log::warn!("could not fit the main window to the monitor work area: {error}");
             }
+            if let Err(error) = window.show() {
+                log::warn!("could not show the main window: {error}");
+            }
+            let _ = window.set_focus();
+            log::info!(
+                "main window shown in {} ms",
+                process_started.elapsed().as_millis()
+            );
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

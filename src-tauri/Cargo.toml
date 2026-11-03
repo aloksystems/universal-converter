@@ -1,6 +1,6 @@
 [package]
 name = "universal-converter"
-version = "1.0.0"
+version = "1.0.1"
 description = "Offline-first universal file converter for Windows"
 authors = ["Alok Kumar"]
 edition = "2024"

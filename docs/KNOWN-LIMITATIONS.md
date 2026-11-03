@@ -1,6 +1,6 @@
 # Known limitations
 
-This is the honest state of version 1.0.0. Items move here only when there is
+This is the honest state of version 1.0.1. Items move here only when there is
 evidence, not because a feature is planned.
 
 ## Distribution
@@ -10,7 +10,7 @@ evidence, not because a feature is planned.
   [BUILD.md](BUILD.md#code-signing).
 - No live auto-update service. Updates are manual until an endpoint and signing
   keys exist.
-- No support page is configured in the public 1.0.0 build. Settings → Diagnostics
+- No support page is configured in the public 1.0.1 build. Settings → Diagnostics
   & support can copy a system/engine summary and export a diagnostic report
   locally; a build that sets `VITE_SUPPORT_URL` also shows an **Open support
   page** button. Nothing is uploaded automatically.

@@ -91,7 +91,7 @@ dependency change and before a release.
 
 ## Code signing
 
-The current 1.0.0 build is **unsigned**. Windows SmartScreen may warn; users can
+The current 1.0.1 build is **unsigned**. Windows SmartScreen may warn; users can
 verify SHA-256 checksums. Unsigned builds cannot establish publisher identity.
 
 To sign, you need a Windows code-signing certificate (OV or EV; EV is needed for
@@ -111,7 +111,7 @@ immediate SmartScreen reputation in many cases). Options supported by Tauri 2:
 After signing, verify the installer and application executable:
 
 ```powershell
-Get-AuthenticodeSignature .\Universal-Converter-Setup-1.0.0.exe
+Get-AuthenticodeSignature .\Universal-Converter-Setup-1.0.1.exe
 Get-AuthenticodeSignature ".\Universal Converter.exe"
 ```
 
@@ -124,7 +124,7 @@ notes and publish checksums.
 
 ## Auto-update preparation (not enabled)
 
-Universal Converter 1.0.0 has **no update endpoint and no updater plugin**. The
+Universal Converter 1.0.1 has **no update endpoint and no updater plugin**. The
 Settings screen states this explicitly. To enable secure updates:
 
 1. Add `tauri-plugin-updater` to Cargo and npm, initialize it in `main.rs`, and

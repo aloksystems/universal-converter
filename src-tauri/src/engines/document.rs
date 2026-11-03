@@ -835,12 +835,26 @@ mod tests {
         dir
     }
 
+    /// LibreOffice is a ~400 MB process and does not fail loudly when Windows
+    /// runs short of memory: it can exit 0 without writing anything. `cargo
+    /// test` starts one test per core, so on an 8 GB machine the document suite
+    /// could have eight copies running at once and lose an export. Taking turns
+    /// keeps the tests deterministic without relaxing a single assertion.
+    static DOCUMENT_GATE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn document_turn() -> std::sync::MutexGuard<'static, ()> {
+        DOCUMENT_GATE
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
     fn run_document(
         input: &Path,
         output: &Path,
         output_format: FormatId,
         settings: serde_json::Value,
     ) -> Result<u64, ConversionError> {
+        let _turn = document_turn();
         let request = JobRequest::for_test(
             &[input.to_str().expect("fixture path is UTF-8")],
             output_format,
@@ -1070,6 +1084,7 @@ mod tests {
 
     #[test]
     fn sheet_names_are_listed_in_workbook_order() {
+        let _turn = document_turn();
         assert_eq!(
             list_sheets(&fixture("sheets.xlsx")).unwrap(),
             vec!["First Sheet".to_owned(), "Second Sheet".to_owned()]

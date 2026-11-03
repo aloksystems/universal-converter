@@ -59,15 +59,42 @@ pub fn probe_files(state: State<'_, AppState>, paths: Vec<String>) -> Vec<FilePr
 }
 
 #[tauri::command]
-pub fn list_engines(state: State<'_, AppState>) -> Vec<EngineInfo> {
-    state.manager.engine_infos()
+pub async fn list_engines(state: State<'_, AppState>) -> CmdResult<Vec<EngineInfo>> {
+    let manager = Arc::clone(&state.manager);
+    let database = Arc::clone(&state.database);
+    // Probing can spawn LibreOffice, FFmpeg or Tesseract. A cold start or an
+    // antivirus scan can take seconds, so it must never run on the thread that
+    // paints the window.
+    tauri::async_runtime::spawn_blocking(move || {
+        let infos = manager.engine_infos();
+        remember_engine_versions(&database, &infos);
+        infos
+    })
+    .await
+    .map_err(|error| AppError::new("engine", format!("engine probe failed: {error}")))
+}
+
+fn remember_engine_versions(database: &Database, infos: &[EngineInfo]) {
+    for info in infos {
+        if let Err(error) =
+            database.remember_engine_version(info.id, info.version.as_deref(), info.available)
+        {
+            log::warn!("could not store {} version: {error}", info.label);
+        }
+    }
 }
 
 /// Per-operation PDF availability. Telling the UI only "the PDF engine exists"
 /// would let a button promise a merge that the native core cannot perform.
 #[tauri::command]
-pub fn pdf_capabilities() -> Vec<crate::engines::pdf::PdfCapability> {
-    crate::engines::pdf::capabilities()
+pub async fn pdf_capabilities() -> Vec<crate::engines::pdf::PdfCapability> {
+    // Loading PDFium and looking for qpdf touches disk; keep it off the UI thread.
+    tauri::async_runtime::spawn_blocking(crate::engines::pdf::capabilities)
+        .await
+        .unwrap_or_else(|error| {
+            log::warn!("PDF capability probe failed: {error}");
+            Vec::new()
+        })
 }
 
 /// Installed OCR languages, not the ones the UI hopes for: the studio only
@@ -283,45 +310,49 @@ pub async fn document_sheets(path: String) -> CmdResult<Vec<String>> {
 
 /// Re-detects binaries after the user installs or moves one.
 #[tauri::command]
-pub fn rescan_engines(state: State<'_, AppState>) -> Vec<EngineInfo> {
-    // FFmpeg caches its binary paths, encoder table and hardware test results;
-    // a rescan must not keep answering with the build that was there before.
-    ffmpeg::reset_caches();
-    state.manager.invalidate_probe_cache();
-    let infos = state.manager.engine_infos();
-    for info in &infos {
-        if let Err(error) =
-            state
-                .database
-                .remember_engine_version(info.id, info.version.as_deref(), info.available)
-        {
-            log::warn!("could not store {} version: {error}", info.label);
-        }
-    }
-    infos
+pub async fn rescan_engines(state: State<'_, AppState>) -> CmdResult<Vec<EngineInfo>> {
+    let manager = Arc::clone(&state.manager);
+    let database = Arc::clone(&state.database);
+    tauri::async_runtime::spawn_blocking(move || {
+        // FFmpeg caches its binary paths, encoder table and hardware test
+        // results; a rescan must not keep answering with the build that was
+        // there before.
+        ffmpeg::reset_caches();
+        manager.invalidate_probe_cache();
+        let infos = manager.engine_infos();
+        remember_engine_versions(&database, &infos);
+        infos
+    })
+    .await
+    .map_err(|error| AppError::new("engine", format!("engine probe failed: {error}")))
 }
 
 #[tauri::command]
-pub fn list_capabilities(
+pub async fn list_capabilities(
     state: State<'_, AppState>,
     input: FormatId,
 ) -> CmdResult<Vec<FormatRoute>> {
-    let routes = registry::capabilities_for(input)
-        .into_iter()
-        .map(|entry| {
-            let info = state.manager.engine_info(entry.engine);
-            FormatRoute {
-                input: entry.input,
-                output: entry.output,
-                engine: entry.engine,
-                engine_label: info.label.clone(),
-                note: entry.note,
-                available: info.available,
-                unavailable_reason: info.unavailable_reason.clone(),
-            }
-        })
-        .collect();
-    Ok(routes)
+    let manager = Arc::clone(&state.manager);
+    tauri::async_runtime::spawn_blocking(move || -> CmdResult<Vec<FormatRoute>> {
+        let routes = registry::capabilities_for(input)
+            .into_iter()
+            .map(|entry| {
+                let info = manager.engine_info(entry.engine);
+                FormatRoute {
+                    input: entry.input,
+                    output: entry.output,
+                    engine: entry.engine,
+                    engine_label: info.label.clone(),
+                    note: entry.note,
+                    available: info.available,
+                    unavailable_reason: info.unavailable_reason.clone(),
+                }
+            })
+            .collect();
+        Ok(routes)
+    })
+    .await
+    .map_err(|error| AppError::new("engine", format!("capability probe failed: {error}")))?
 }
 
 #[tauri::command]
@@ -1138,9 +1169,10 @@ pub fn install(app: &AppHandle) -> Result<(), ConversionError> {
     apply_engine_paths(&settings);
     let manager = Arc::new(ConversionManager::new());
 
-    for info in manager.engine_infos() {
-        database.remember_engine_version(info.id, info.version.as_deref(), info.available)?;
-    }
+    // Engine discovery is deliberately not part of setup. Probing starts
+    // processes and can stall for seconds on a cold install, which previously
+    // kept the window hidden and marked it "Not Responding". The UI asks for
+    // `list_engines` once it is on screen; that command runs off the UI thread.
 
     // A fresh process owns no scratch folders, so anything still there was left
     // by a crash, a forced kill or a Windows shutdown.

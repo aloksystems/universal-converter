@@ -81,16 +81,54 @@ impl ConversionManager {
         }
     }
 
+    /// Probe every engine concurrently, keeping the declaration order. Each
+    /// probe may start a process (LibreOffice can take seconds during a cold
+    /// start), so running them one after another made the first UI load look
+    /// like a hang even though the window itself was already visible.
     pub fn engine_infos(&self) -> Vec<EngineInfo> {
-        self.engines
-            .iter()
-            .map(|engine| engine.probe())
-            .collect::<Vec<_>>()
-            .into_iter()
-            .inspect(|info| {
-                if let Ok(mut cache) = self.probe_cache.lock() {
-                    cache.insert(info.id, info.clone());
+        let mut probed: Vec<Option<EngineInfo>> = vec![None; self.engines.len()];
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = self
+                .engines
+                .iter()
+                .enumerate()
+                .map(|(index, engine)| {
+                    let manager = self;
+                    scope.spawn(move || {
+                        let id = engine.id();
+                        let started = std::time::Instant::now();
+                        let info = manager.engine_info(id);
+                        log::info!(
+                            "engine {} probe finished in {} ms",
+                            id.label(),
+                            started.elapsed().as_millis()
+                        );
+                        (index, info)
+                    })
+                })
+                .collect();
+            for handle in handles {
+                if let Ok((index, info)) = handle.join() {
+                    probed[index] = Some(info);
                 }
+            }
+        });
+        probed
+            .into_iter()
+            .enumerate()
+            .map(|(index, info)| {
+                info.unwrap_or_else(|| {
+                    let id = self.engines[index].id();
+                    EngineInfo {
+                        id,
+                        label: id.label().to_owned(),
+                        available: false,
+                        version: None,
+                        unavailable_reason: Some(
+                            "the engine probe stopped unexpectedly".to_owned(),
+                        ),
+                    }
+                })
             })
             .collect()
     }

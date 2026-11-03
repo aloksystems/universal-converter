@@ -45,15 +45,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadError: null,
   hydrated: false,
   hydrate: async () => {
+    // Settings and resources are local and quick. Engines need process probes,
+    // so fetch them separately: waiting for them here would hold the whole UI
+    // on its defaults for as long as LibreOffice takes to answer.
     try {
-      const [settings, engines, resources] = await Promise.all([
-        api.getSettings(),
-        api.listEngines(),
-        api.systemResources(),
-      ])
-      set({ settings, engines, resources, loadError: null, hydrated: true })
+      const [settings, resources] = await Promise.all([api.getSettings(), api.systemResources()])
+      set({ settings, resources, loadError: null, hydrated: true })
     } catch (error) {
       set({ loadError: message(error), hydrated: true })
+      return
+    }
+    try {
+      const engines = await api.listEngines()
+      set({ engines, loadError: null })
+    } catch (error) {
+      set({ loadError: message(error) })
     }
   },
   saveSettings: async (next) => {

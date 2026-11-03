@@ -1,6 +1,7 @@
 # Project completion report
 
-Date: 2026-11-03. Application version: 1.0.0.
+Date: 2026-11-03. Application version: 1.0.1 (the 1.0.0 audit is kept
+below; only the startup fixes and their verification are new).
 Scope: phases 1–9 of the Universal Converter plan, checked against the actual
 repository, the shipped release artifacts, and a fresh verification run.
 
@@ -9,9 +10,37 @@ is evidence from a real run on this machine. Work that exists but could not be
 exercised here is labelled accordingly. Nothing is marked complete because the
 interface renders.
 
+## 1.0.1 startup fix (2026-11-03)
+
+The installed 1.0.0 build took tens of seconds to show a window, painted it blank
+and marked it "Not Responding", and opened a command prompt beside it. Three
+independent causes were found and fixed:
+
+1. **Console window.** `src-tauri/src/main.rs` did not declare
+   `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`, so the
+   release binary was linked as a console process and Windows allocated a
+   console for it. The attribute is now present; the stdout log target is
+   debug-only because a GUI build has no stdout.
+2. **Blocking setup.** `commands::install()` probed every engine before the
+   window was shown. Each probe starts a process, and LibreOffice alone takes
+   several seconds on a cold profile (longer while antivirus scans the freshly
+   installed 2 GB payload). Engine discovery is removed from setup; the UI asks
+   for `list_engines` once it is on screen and that command runs on a blocking
+   worker. Probes now run concurrently, and capabilities are fetched the same
+   way, so the window paints immediately and engine status fills in.
+3. **Blank webview.** A missing (deleted) working directory makes WebView2 fail
+   with `E_INVALIDARG`. The app now restores the executable's folder when the
+   inherited working directory no longer exists. If a webview still cannot be
+   created, a native error dialog explains that the WebView2 Runtime needs
+   repair instead of leaving a blank window.
+
+The frontend hydration was split so settings and system resources apply at once
+and engines arrive separately. The Home and first-run screens show "checking
+engines" until that probe returns.
+
 ## Result
 
-The repository contains a complete 1.0.0 implementation of all nine phases. The
+The repository contains a complete 1.0.1 implementation of all nine phases. The
 build, lint, formatting, test suite and release checksum checks pass. The
 remaining open items are external or environmental — a pushed GitHub repository
 with a self-hosted Windows runner, a code-signing certificate, an update host,
@@ -39,7 +68,7 @@ than faked.
    compilation on hosted Windows runners, with the full engine suite gated to a
    self-hosted runner. It has not executed on GitHub from this folder.
 2. **Automated test pipeline — VERIFIED LOCALLY.** `cargo test --all-targets`
-   passed 262 tests, 0 failed, 0 ignored (305.93 s) on 2026-11-03, using the real
+   passed 262 tests, 0 failed, 0 ignored (418.37 s) on 2026-11-03, using the real
    bundled engines. `cargo fmt --check` passed.
 3. **Release automation — IMPLEMENTED BUT NOT VERIFIED AS A WORKFLOW.**
    `scripts/check-versions.mjs` and `scripts/package-release.mjs` plus
@@ -79,12 +108,16 @@ than faked.
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Rust tests | `cargo test --manifest-path src-tauri/Cargo.toml --all-targets` | **PASS** — 262 passed, 0 failed, 0 ignored (305.93 s) |
+| Rust tests | `cargo test --manifest-path src-tauri/Cargo.toml --all-targets` | **PASS** — 262 passed, 0 failed, 0 ignored (418.37 s; the LibreOffice tests take turns because this machine has 8 GB of RAM) |
 | Rust formatting | `cargo fmt --check` | **PASS** |
 | Rust lints | `cargo clippy --all-targets -- -D warnings` | **PASS** |
 | Frontend lint | `npm run lint` | **PASS** — 0 errors, 24 warnings (same advisory set as the QA report) |
 | Frontend build | `npm run build` | **PASS** — `tsc -b && vite build` |
-| Version consistency | `npm run check:versions` | **PASS** — package.json, Cargo.toml and tauri.conf.json all 1.0.0 |
+| Version consistency | `npm run check:versions` | **PASS** — package.json, Cargo.toml and tauri.conf.json all 1.0.1 |
+| Release build | `npm run release:build` | **PASS** — installer 604.8 MB, portable ZIP 647.2 MB, both 1.0.1; `checksums.txt` matches `Get-FileHash` |
+| GUI subsystem | PE optional-header check on the built exe | **PASS** — subsystem 2 (Windows GUI), so no console window |
+| Installed launch | Install 1.0.1, start `universal-converter.exe` | **PASS** — window handle in 2.3 s, `main window shown in 3288 ms`, `startup state ready in 138 ms`, `Responding = True`, no `conhost.exe` child |
+| Background engine load | Log after launch | **PASS** — all seven engines probed after the window appeared; LibreOffice 5.6 s, FFmpeg 3.3 s, Tesseract 1.9 s; the UI stayed responsive throughout |
 | npm audit | `npm audit --audit-level=high` | **PASS** — 0 vulnerabilities |
 | Rust audit | `cargo audit --file src-tauri/Cargo.lock` | **PASS** — 0 vulnerabilities; 7 warnings (unmaintained crates, yanked `async-executor`, Linux/GTK-only `glib` advisory) recorded in [SECURITY.md](SECURITY.md) |
 | Release checksums | `Get-FileHash` against `release/checksums.txt` | **PASS** — both SHA-256 values match |
@@ -98,14 +131,14 @@ the historical record for the shipped binaries.
 
 These cannot be completed from this folder and are not implementation gaps:
 
-1. **Git repository and remote.** This directory is not a Git repository, so the
-   GitHub workflows cannot run yet. Initialise a repository, add the remote,
-   push `main`, and register a self-hosted Windows runner labelled
-   `self-hosted`, `windows`, `x64`, `engine-payload` with `resources/` populated
-   before dispatching `release-build.yml`. The `.gitignore` now excludes the
-   ~2 GB engine payload while keeping `resources/README.md` and
-   `resources/licenses/` trackable.
-2. **Code-signing certificate.** The 1.0.0 artifacts are unsigned, so SmartScreen
+1. **Self-hosted engine runner.** The repository is initialised and pushes to
+   `origin` (`aloksystems/universal-converter`, branch `main`), so the hosted
+   frontend and Rust jobs can run. The full engine suite still needs a
+   self-hosted Windows runner labelled `self-hosted`, `windows`, `x64`,
+   `engine-payload` with `resources/` populated before dispatching
+   `release-build.yml`. The `.gitignore` excludes the ~2 GB engine payload while
+   keeping `resources/README.md` and `resources/licenses/` trackable.
+2. **Code-signing certificate.** The 1.0.1 artifacts are unsigned, so SmartScreen
    can warn. Certificate requirements and verification commands are in
    [BUILD.md](BUILD.md#code-signing).
 3. **Update hosting and signing keys.** No updater is shipped. Enabling one

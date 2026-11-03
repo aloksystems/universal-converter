@@ -37,13 +37,13 @@ release assets are published, or from the local `release/` folder after building
 (per-user, no administrator prompt):
 
 ```
-release/Universal-Converter-Setup-1.0.0.exe
+release/Universal-Converter-Setup-1.0.1.exe
 ```
 
 The portable build is a ZIP:
 
 ```
-release/Universal-Converter-Portable-1.0.0.zip
+release/Universal-Converter-Portable-1.0.1.zip
 ```
 
 Unzip it anywhere and run `Universal Converter.exe`; keep the `resources` folder
