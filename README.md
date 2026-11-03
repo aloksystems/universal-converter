@@ -32,19 +32,17 @@ optional engine shows its reason and setup hint instead of a dead button.
 
 ## Install
 
-Use the NSIS installer from this repository's GitHub Releases page once the
-release assets are published, or from the local `release/` folder after building
-(per-user, no administrator prompt):
+Download the NSIS installer from the published release (per-user, no
+administrator prompt):
 
-```
-release/Universal-Converter-Setup-1.0.1.exe
-```
+<https://github.com/aloksystems/universal-converter/releases/download/v1.0.1/Universal-Converter-Setup-1.0.1.exe>
 
 The portable build is a ZIP:
 
-```
-release/Universal-Converter-Portable-1.0.1.zip
-```
+<https://github.com/aloksystems/universal-converter/releases/download/v1.0.1/Universal-Converter-Portable-1.0.1.zip>
+
+`checksums.txt` and `RELEASE-NOTES.md` are attached to the same release. After
+building locally the same files appear in `release/`.
 
 Unzip it anywhere and run `Universal Converter.exe`; keep the `resources` folder
 next to the executable. Portable data still lives in `%APPDATA%\UniversalConverter`

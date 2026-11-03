@@ -56,10 +56,10 @@ than faked.
 | 3 | Audio & video | **VERIFIED** (hardware path: **IMPLEMENTED BUT NOT VERIFIED**) | Real FFmpeg/ffprobe tests cover WAV/MP3/FLAC, MP4/WebM/MKV/GIF, trim, extraction, bitrate, sample rate, channels, metadata, cancel and timeout. NVENC/Quick Sync/AMF detection and fallback are coded and unit-tested, but no GPU encoder exists on this machine, so a real hardware encode was not run. |
 | 4 | Documents & archives | **VERIFIED** | LibreOffice tests convert DOCX/XLSX/PPTX/TXT/HTML and re-open PDF/ODF/CSV/RTF outputs; 7-Zip tests create and extract ZIP/7Z/TAR/TAR.GZ/TAR.BZ2/TAR.XZ with AES-256, and refuse traversal, absolute paths, symlinks, duplicates, bombs and malformed fixtures. |
 | 5 | OCR, metadata, utilities, automation, presets, workflows | **VERIFIED** | Real Tesseract text and searchable-PDF tests; metadata read/edit/remove verified by re-reading; hash vectors, duplicate/size reports, comparisons; watcher converts a real new file; preset import/export/validation; two-step workflow produces the final format and cleans scratch. |
-| 6 | Production release | **PARTIALLY IMPLEMENTED** | NSIS installer and portable ZIP were built and their SHA-256 checksums were re-verified on 2026-11-03. The portable ZIP contains the engine payload and launches (verified in the 2026-11-02 QA run). The installer was inspected but not executed, and the build is unsigned with no updater. |
+| 6 | Production release | **VERIFIED** | NSIS installer and portable ZIP were built and their SHA-256 checksums re-verified on 2026-11-03. The portable ZIP contains the engine payload and launches (verified in the 2026-11-02 QA run). The 1.0.1 installer executed silently with exit code 0, installed over 1.0.0, and the installed app launched and loaded every engine. Both artifacts are published on GitHub release `v1.0.1`; the build is unsigned with no updater. |
 | 7 | QA and compatibility | **VERIFIED** with documented gaps | [QA-REPORT.md](QA-REPORT.md) records executed tests, bugs fixed and retested. Windows 10 x64 was tested; Windows 11, ARM64/32-bit, screen-reader output and high-contrast mode were not. |
 | 8 | UX and Windows integration | **PARTIALLY IMPLEMENTED** | Drag-and-drop, quick convert, global search, shortcuts, queue actions, favorites, tray, single-instance hand-off and workflows exist and are covered by code/tests. Tray and single-instance were exercised on the packaged build. Explorer context-menu entries, Open With and completion toasts were not exercised interactively because that changes the machine. |
-| 9 | Long-term maintenance | **IMPLEMENTED** (CI execution: **IMPLEMENTED BUT NOT VERIFIED**) | Workflows, release automation, dependency inventory, security policy, crash recovery, backup/restore, diagnostics and extensibility docs are present. The GitHub workflows have not run because this folder is not currently a Git repository with a remote; see "Remaining external steps". |
+| 9 | Long-term maintenance | **IMPLEMENTED** (CI execution: **VERIFIED**) | Workflows, release automation, dependency inventory, security policy, crash recovery, backup/restore, diagnostics and extensibility docs are present. GitHub Actions CI runs #5 and #6 passed both hosted jobs; the full engine suite still needs the self-hosted runner. |
 
 ## Phase 9 status list
 
@@ -124,6 +124,8 @@ than faked.
 | npm audit | `npm audit --audit-level=high` | **PASS** — 0 vulnerabilities |
 | Rust audit | `cargo audit --file src-tauri/Cargo.lock` | **PASS** — 0 vulnerabilities; 7 warnings (unmaintained crates, yanked `async-executor`, Linux/GTK-only `glib` advisory) recorded in [SECURITY.md](SECURITY.md) |
 | Release checksums | `Get-FileHash` against `release/checksums.txt` | **PASS** — both SHA-256 values match |
+| GitHub Release | `GET /releases/tags/v1.0.1` after upload | **PASS** — release 432525859, four assets `uploaded`, byte sizes equal to the local files, GitHub `digest` values equal to `checksums.txt` |
+| Public download | Anonymous fetch of the release URLs | **PASS** — `checksums.txt` downloads byte-identical; both large assets return HTTP 200 with the expected `Content-Length` |
 | Portable payload | 7-Zip listing of the portable ZIP | **PASS** — app exe plus FFmpeg, 7-Zip, LibreOffice, Tesseract/tessdata, PDFium and qpdf present |
 
 The test count is 4 higher than the 258 recorded in the 1.0.0 QA run because

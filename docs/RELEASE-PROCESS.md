@@ -112,16 +112,26 @@ failed and successful update have all been tested.
 
 ## Tagging and publishing
 
-After the artifacts pass verification:
+1. Verify the artifacts as described above.
+2. Create the tag and release from the same commit that produced the binaries:
 
-```bash
-git tag -a v1.0.1 -m "Universal Converter 1.0.1"
-git push origin v1.0.1
-```
+   ```bash
+   git tag -a v1.0.1 -m "Universal Converter 1.0.1"
+   git push origin v1.0.1
+   ```
 
-Create the GitHub release manually, attach the installer, portable ZIP,
-`checksums.txt` and `RELEASE-NOTES.md`, and repeat the unsigned-build warning.
-Ordinary commits and pull requests never publish a release.
+3. Attach `Universal-Converter-Setup-1.0.1.exe`,
+   `Universal-Converter-Portable-1.0.1.zip`, `checksums.txt` and
+   `RELEASE-NOTES.md`, and repeat the unsigned-build warning in the notes.
+4. Confirm every asset reports `state: uploaded`, the byte size matches the
+   local file, and GitHub's computed `digest` matches `checksums.txt`.
+
+Fixes were published this way for 1.0.1 on 2026-11-03:
+<https://github.com/aloksystems/universal-converter/releases/tag/v1.0.1>.
+The API upload used `POST /repos/:owner/:repo/releases` and then
+`POST https://uploads.github.com/repos/:owner/:repo/releases/:id/assets?name=…`
+with `Content-Type: application/octet-stream`, streaming each file rather than
+buffering it. Ordinary commits and pull requests never publish a release.
 
 ## Rollback
 

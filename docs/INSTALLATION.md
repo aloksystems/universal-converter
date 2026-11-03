@@ -12,11 +12,13 @@
 
 ## Installer
 
-1. Verify the download against `checksums.txt` from the same release (see below).
-2. Run `Universal-Converter-Setup-1.0.1.exe`.
-3. The installer is per-user and installs under
+1. Download the installer from
+   <https://github.com/aloksystems/universal-converter/releases/tag/v1.0.1>.
+2. Verify the download against `checksums.txt` from the same release (see below).
+3. Run `Universal-Converter-Setup-1.0.1.exe`.
+4. The installer is per-user and installs under
    `%LOCALAPPDATA%\Universal Converter`. No UAC prompt is expected.
-4. Start **Universal Converter** from the Start Menu shortcut.
+5. Start **Universal Converter** from the Start Menu shortcut.
 
 The build is currently **unsigned**. Windows SmartScreen can show “Windows
 protected your PC” / “unknown publisher”. Choose **More info → Run anyway** only
