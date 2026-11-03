@@ -51,6 +51,16 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run check:versions
+      - name: Create engine folders for compile checks
+        shell: pwsh
+        run: |
+          # tauri-build copies bundle.resources while compiling and fails when a
+          # configured path is absent. The real payload is gitignored (~2 GB), so
+          # this compile-only job creates empty folders; runtime engine tests run
+          # on the self-hosted runner instead.
+          foreach ($name in 'pdfium','qpdf','ffmpeg','7zip','libreoffice','tesseract') {
+            New-Item -ItemType Directory -Force -Path "resources/$name" | Out-Null
+          }
       - run: cargo fmt --check --manifest-path src-tauri/Cargo.toml
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets --no-run
